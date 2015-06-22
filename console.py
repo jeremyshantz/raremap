@@ -19,11 +19,11 @@ def doCommonNames():
   removeGroup('common')
   emptyFolder(commonpath)
   emptyFolder(regionpath)
- # emptyFolder(dumppath)
- # emptyFolder(dumppath2)
+  emptyFolder(dumppath)
+  emptyFolder(dumppath2)
   emptyFolder(outputpath)
   
-  # split
+  # split into 20 layer regions
   processing.runalg("qgis:splitvectorlayer", basepath+'/layers/main/commonnames.shp', 'MWShapeID', commonpath)
 
   files = [ f for f in listdir(commonpath) if isfile(join(commonpath,f)) and f.endswith('.shp') ]
@@ -41,12 +41,11 @@ def doSingleCommonName(path):
   tile_width = 100
   tile_height = 60
 
-  result = processing.runalg('qgis:vectorgrid', extentstr, tile_width, tile_height, 0, output)
- # result = processing.runalg('gdalogr:clipvectorsbypolygon', result['OUTPUT'], path, None, output)
+  result = processing.runalg('qgis:vectorgrid', extentstr, tile_width, tile_height, 0, None)
+  result = processing.runalg('gdalogr:clipvectorsbypolygon', result['OUTPUT'], path, None, output)
   
   layer2 = QgsVectorLayer(output, newname, "ogr")
   layer2.setCrs(crs)
-  
   
   QgsVectorFileWriter.writeAsVectorFormat(layer2, output, "utf-8", crs, "ESRI Shapefile")
   
@@ -58,19 +57,19 @@ def doSingleCommonName(path):
 def doTiles():
 
   try:
-    # emptyFolder(dumppath)
+    emptyFolder(dumppath)
 
     # split each region into its tiles
     files = [ f for f in listdir(regionpath) if isfile(join(regionpath,f)) and f.endswith('.shp') ]
     for f in files:
         processing.runalg("qgis:splitvectorlayer", join(regionpath, f), 'id', dumppath)
-
+        
     # process each tile
     files = [ f for f in listdir(dumppath) if isfile(join(dumppath,f)) and f.endswith('.shp') ]
     for f in files:
+      print f
       doSingleTile(join(dumppath, f))
       
-    
     # emptyFolder(dumppath)
   except Exception as ex:
     print ex
@@ -78,9 +77,12 @@ def doTiles():
 def doSingleTile(path):
 
   try:
-    newname = 'R' + os.path.splitext(basename(path))[0].replace('.shp', '').replace('id', '').replace('MWShapeID', '').replace('__', '_')
+      # MWShapeID_10.shp_id_25.shp  
+    splits = basename(path).replace('.shp', '').split('_')
+    newname = newname = splits[1] + splits[3] + '.shp'
 
-    tempoutput = join(dumppath2, newname) + '.shp'
+    dump2output = join(dumppath2, newname) + '.shp'
+    print(dump2output)
     
     vlayer = QgsVectorLayer(path, newname, "ogr") 
     vlayer.setCrs(crs)
@@ -92,18 +94,10 @@ def doSingleTile(path):
 
     t1 = join(dumppath2, newname) + '_GRID.shp'
     
-    result = processing.runalg('qgis:vectorgrid', extentstr, tile_width, tile_height, 0, tempoutput)
-    
-    vlayer = QgsVectorLayer(t1, newname, "ogr") 
-    vlayer.setCrs(crs)
-    print(path)
-    print(t1)
+    result = processing.runalg('qgis:vectorgrid', extentstr, tile_width, tile_height, 0, dump2output)
+
     # result['OUTPUT']
    # result = processing.runalg('gdalogr:clipvectorsbypolygon', t1, path, None, tempoutput)
-    
-    vlayer = QgsVectorLayer(tempoutput, newname, "ogr") 
-    vlayer.setCrs(crs)
-    print(tempoutput)
     
   except Exception as ex:
     print ex + ' ' + path
@@ -127,6 +121,3 @@ def saveAsGeoJson(path):
 #emptyFolder(outputpath)
 doCommonNames()
 doTiles()
-
-#doSingleCommonName('/home/jshantz/dev/raremap/layers/main/commonnames_MWShapeID_0.shp')
-#doSingleTile('/home/jshantz/dev/raremap/layers/main/dump/MWShapeID_0.shp_id_31.shp')
