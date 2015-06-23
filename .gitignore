@@ -1,2 +1,5 @@
-/dump/
-/dump2/
+**/dump/*
+**/dump2/*
+**/regions/*
+**/old/*
+**/common/*
