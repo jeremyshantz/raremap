@@ -13,15 +13,18 @@ regionpath = basepath + '/layers/main/regions/'
 dumppath =  basepath + '/layers/main/dump/'
 dumppath2 =  basepath + '/layers/main/dump2/'
 outputpath =  basepath + '/layers/output/' # geojson goes here
+clippedpath = basepath + '/layers/main/clipped/'
 
 def doCommonNames():
 
   removeGroup('common')
+
   emptyFolder(commonpath)
   emptyFolder(regionpath)
   emptyFolder(dumppath)
   emptyFolder(dumppath2)
   emptyFolder(outputpath)
+  emptyFolder(clippedpath) 
   
   # split into 20 layer regions
   processing.runalg("qgis:splitvectorlayer", basepath+'/layers/main/commonnames.shp', 'MWShapeID', commonpath)
@@ -38,8 +41,8 @@ def doSingleCommonName(path):
   
   extent = vlayer.extent()
   extentstr = '%.2f, %.2f, %.2f, %.2f' % (extent.xMinimum(), extent.xMaximum(), extent.yMinimum(), extent.yMaximum())
-  tile_width = 100
-  tile_height = 60
+  tile_width = 80
+  tile_height = 50
 
   result = processing.runalg('qgis:vectorgrid', extentstr, tile_width, tile_height, 0, None)
   result = processing.runalg('gdalogr:clipvectorsbypolygon', result['OUTPUT'], path, None, output)
@@ -67,30 +70,28 @@ def doTiles():
     # process each tile
     files = [ f for f in listdir(dumppath) if isfile(join(dumppath,f)) and f.endswith('.shp') ]
     for f in files:
-      print f
       doSingleTile(join(dumppath, f))
-      
-    # emptyFolder(dumppath)
+    
   except Exception as ex:
     print ex
 
 def doSingleTile(path):
-
+  
   try:
       # MWShapeID_10.shp_id_25.shp  
-    splits = basename(path).replace('.shp', '').split('_')
-    newname = newname = splits[1] + splits[3] + '.shp'
-
+    #splits = basename(path).replace('.shp', '').split('_')
+    #newname = newname = splits[1] + splits[3] + '.shp'
+    newname = basename(path)
     dump2output = join(dumppath2, newname) + '.shp'
-    print(dump2output)
+    #print(dump2output)
     
     vlayer = QgsVectorLayer(path, newname, "ogr") 
     vlayer.setCrs(crs)
     
     extent = vlayer.extent()
     extentstr = '%.2f, %.2f, %.2f, %.2f' % (extent.xMinimum(), extent.xMaximum(), extent.yMinimum(), extent.yMaximum())
-    tile_width = 2
-    tile_height = 2
+    tile_width = 1.1
+    tile_height = 1.1
 
     t1 = join(dumppath2, newname) + '_GRID.shp'
     
@@ -118,6 +119,6 @@ def saveAsGeoJson(path):
   layer = QgsVectorLayer(path, "name", "ogr") 
   QgsVectorFileWriter.writeAsVectorFormat(layer, name, "utf-8", layer.crs(), "GeoJson")
       
-#emptyFolder(outputpath)
+
 doCommonNames()
 doTiles()
